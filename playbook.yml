@@ -1,0 +1,61 @@
+-
+  name: wordpress
+  hosts: all
+  become: true  
+  tasks:
+    - name: Update all packages to their latest version
+      ansible.builtin.apt:
+        name: "*"
+        state: latest
+
+    - name: update
+      command: apt update 
+
+    - name: Install mysql-client
+      command: apt install mysql-client -y
+
+      
+    - name: Install nginx 
+      ansible.builtin.apt:
+        name: nginx
+        state: present  
+     
+    - name: php extensions
+      ansible.builtin.apt: name={{item}} state=present update_cache=yes
+      with_items:
+        - php-curl 
+        - php-gd 
+        - php-mbstring 
+        - php-xml 
+        - php-xmlrpc 
+        - php-soap 
+        - php-intl 
+        - php-zip
+        - php-mysql
+        - php-fpm
+
+    - name: Download and unpack latest WordPress
+      ansible.builtin.unarchive:
+        src: https://wordpress.org/latest.tar.gz
+        dest: "/var/www/"
+        remote_src: yes
+        
+    - name: set permissions
+      command: chown -R www-data:www-data /var/www/wordpress  
+
+    - name: set permissions fo directories
+      command: find /var/www/wordpress/ -type d -exec chmod 750 {} \;
+
+    - name: set permissions for files
+      command: find /var/www/wordpress/ -type f -exec chmod 640 {} \;   
+
+    - name: Copying Nginx config file for wordpress 
+      ansible.builtin.copy:
+        src: /home/ubuntu/default
+        dest: /etc/nginx/sites-enabled/ 
+        follow: yes  
+
+    - name: Restart service Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: restarted      
